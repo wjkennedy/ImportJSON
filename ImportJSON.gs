@@ -29,7 +29,7 @@ function onOpen() {
 
 /*====================================================================================================================================*
   ImportJSON by Trevor Lohrbeer (@FastFedora)
-  Extended for Atlassian Cloud Auth by <your-name-here>
+  Extended for Atlassian Cloud Auth by William Kennedy
   ====================================================================================================================================
 */
 
@@ -68,25 +68,55 @@ function ImportJSON(url, query, options, email, token) {
  * @return {Array<Array>} Two-dimensional array of data, with the first row containing headers
  */
 function ImportJSONAdvanced(url, query, options, email, token, includeFunc, transformFunc) {
-  var fetchOptions = {
-    method: 'get',
-    muteHttpExceptions: true
-  };
-  
-  // If Atlassian Cloud creds provided, add Authorization header
-  if (email && token) {
-    var authString = email + ':' + token; 
-    var authHeader = Utilities.base64Encode(authString);
-    fetchOptions.headers = {
-      'Authorization': 'Basic ' + authHeader
-    };
-  }
 
-  var jsondata = UrlFetchApp.fetch(url, fetchOptions);
-  var object   = JSON.parse(jsondata.getContentText());
+  var scriptProperties = PropertiesService.getScriptProperties();
+  var atlassianUrl   = scriptProperties.getProperty("url");
+  var atlassianEmail = scriptProperties.getProperty("email");
+  var atlassianToken = scriptProperties.getProperty("token");
+
+   // Fallback to script properties if not provided
+  if (!url || url === "") {
+    url = scriptProperties.getProperty("url"); 
+  }
+  if (!email || email === "") {
+    email = scriptProperties.getProperty("email");
+  }
+  if (!token || token === "") {
+    token = scriptProperties.getProperty("token");
+  }
   
-  return parseJSONObject_(object, query, options, includeFunc, transformFunc);
+  try {
+    var fetchOptions = {
+      method: 'get',
+      muteHttpExceptions: true
+    };
+    
+    if (email && token) {
+      var authHeader = Utilities.base64Encode(email + ':' + token);
+      fetchOptions.headers = {
+        'Authorization': 'Basic ' + authHeader
+      };
+    }
+
+    Logger.log('Fetching ' + url + ' with options: ' + JSON.stringify(fetchOptions));
+    
+    var response = UrlFetchApp.fetch(url, fetchOptions);
+    Logger.log('HTTP Status: ' + response.getResponseCode());
+    
+    var jsonString = response.getContentText();
+    Logger.log('JSON snippet: ' + jsonString.substring(0, 200)); // partial log
+
+    var object = JSON.parse(jsonString);
+    
+    return parseJSONObject_(object, query, options, includeFunc, transformFunc);
+    
+  } catch (err) {
+    Logger.log('Error fetching or parsing JSON: ' + err);
+    // Optionally rethrow or return an empty array
+    return [['Error'], [err]];
+  }
 }
+
 
 /** 
  * Encodes the given value to use within a URL.
