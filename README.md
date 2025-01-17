@@ -1,43 +1,120 @@
-# ImportJSON
 
-**NOTE: This repo is currently unmaintained and looking for a new developer. If you are interested please reach out to contact@bradjasper.com**
+# ImportJSON for Atlassian Cloud
 
-Import JSON from any URL directly into your Google Sheets. `ImportJSON.gs` adds an `=ImportJSON()` function to your spreadsheet, allowing quick and easy JSON importing. To use go to `Tools` > `Script Editor` and add the `ImportJSON.gs` file. Now in your spreadsheet you can access the `ImportJSON()` function. Use it like this:
+This repository contains a custom Google Apps Script that extends the `ImportJSON` function to support Atlassian Cloud APIs (e.g., Jira Cloud, Confluence Cloud). By storing your Atlassian Cloud URL, email, and API token in Script Properties, you can easily import JSON data into a Google Sheet without exposing credentials in plain text.
 
-    =ImportJSON("https://mysafeinfo.com/api/data?list=bestnovels&format=json&rows=20&alias=cnt=count,avg=average_rank,tt=title,au=author,yr=year", "/title")
+---
 
-Here are all the functions available:
+## Overview
 
-| Function                |  Description                                                                      |
-|-------------------------|-----------------------------------------------------------------------------------|
-| **ImportJSON**          | For use by end users to import a JSON feed from a URL                             |
-| **ImportJSONFromSheet** | For use by end users to import JSON from one of the Sheets                        |
-| **ImportJSONViaPost**   | For use by end users to import a JSON feed from a URL using POST parameters       |
-| **ImportJSONBasicAuth** | For use by end users to import a JSON feed from a URL with HTTP Basic Auth        |
-| **ImportJSONAdvanced**  | For use by script developers to easily extend the functionality of this library   |
+- **Language:** Google Apps Script (JavaScript).
+- **Purpose:** Retrieve JSON from Atlassian Cloud APIs using Basic Auth with API tokens.
+- **Key Functions:** 
+  - `ImportJSONAdvanced(url, query, options, email, token)`  
+  - `ImportJSON(url, query, options, email, token)`  
+  - Both can leverage script properties to avoid hard-coding credentials.
 
-Review `ImportJSON.gs` for more info on how to use these in detail.
+**Live Example Sheet:** [Google Sheet with Script Attached](https://docs.google.com/spreadsheets/d/1Fsi-JKr0hd5WeFUTE_1ov55l1pET9Kg8_BCtvX3_dRE/edit?usp=sharing)
 
-## Version
-- v1.6.0 (June 2, 2019) Fixed null values (thanks @gdesmedt1)
-- v1.5.0 (January 11, 2019) Adds ability to include all headers in a fixed order even when no data is present for a given header in some or all rows.
-- v1.4.0 (July 23, 2017) - Project transferred to Brad Jasper. Fixed off-by-one array bug. Fixed previous value bug. Added custom annotations. Added ImportJSONFromSheet and ImportJSONBasicAuth.
-- v1.3.0 - Adds ability to import the text from a set of rows containing the text to parse. All cells are concatenated
-- v1.2.1 - Fixed a bug with how nested arrays are handled. The rowIndex counter wasn't incrementing properly when parsing.
-- v1.2.0 - Added ImportJSONViaPost and support for fetchOptions to ImportJSONAdvanced
-- v1.1.1 - Added a version number using Google Scripts Versioning so other developers can use the library
-- v1.1.0 - Added support for the noHeaders option
-- v1.0.0 - Initial release
+---
 
-## How can you help?
-- Found a bug? Report it! https://github.com/bradjasper/ImportJSON/issues
-- Want to contribute? Submit an <a href="https://github.com/bradjasper/ImportJSON/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement">enhancement</a>
+## Getting Started
 
-## Website archive
-This code base used to be hosted at http://blog.fastfedora.com/projects/import-json and contained a lot of useful information. It has been archived at https://rawgit.com/bradjasper/ImportJSON/master/archive/blog.fastfedora.com/projects/import-json.html
+1. **Open the Google Sheet**  
+   - Use the link above or make a copy of the sheet containing the script.
+   - Alternatively, you can copy the code from this repository into a new Apps Script project attached to your own Google Sheet.
 
-## Alternatives
-Some of this if possible internally with Google App Scripts External APIs, like UrlFetch: https://developers.google.com/apps-script/guides/services/external
+2. **Access the Script Editor**  
+   - In the Sheet, go to **Extensions** → **Apps Script**.
+   - This opens the Apps Script editor, where you can view/edit the `ImportJSON.gs` file.
 
-These require a Google account and an explicit permission, but in some cases may be a good fit.
+3. **Set Script Properties**  
+   In the Apps Script editor:
+   1. Click the gear icon (Project Settings) on the left or use the menu: **Project** → **Project Properties**.
+   2. Locate **Script Properties** and click **Open Script Properties**.
+   3. Create properties for:
+      - `url` – Your Atlassian Cloud URL, e.g. `https://your-domain.atlassian.net/`.
+      - `email` – The email you use for Atlassian Cloud.
+      - `token` – Your Atlassian API token (generated from <https://id.atlassian.com/manage/api-tokens>).
 
+   **Example:**
+   ```
+   url = https://your-domain.atlassian.net/
+   email = me@mydomain.com
+   token = abc123generatedapitoken
+   ```
+
+4. **Confirm the Script is Available**  
+   - In the script code, ensure you see the `ImportJSON` and `ImportJSONAdvanced` functions.  
+   - Feel free to run a test function or open the logs (`View` → `Logs`) to confirm the code is active.
+
+---
+
+## Usage in the Spreadsheet
+
+### Option A: Directly pass all parameters
+```none
+=ImportJSONAdvanced(
+  "https://your-domain.atlassian.net/rest/api/3/search?jql=project=MYPROJ",
+  "/issues",
+  "noHeaders",
+  "your.email@company.com",
+  "yourApiToken"
+)
+```
+- **URL**: The Atlassian REST endpoint (Jira, Confluence, etc.).  
+- **Query**: Paths to import from the JSON.  
+- **Options**: Comma-separated (e.g., `"noHeaders,noTruncate"`).  
+- **Email** and **Token**: Atlassian credentials.
+
+### Option B: Omit parameters to use Script Properties
+If you leave some (or all) parameters blank, the script will use whatever you set in `url`, `email`, and `token` in Script Properties. For example:
+
+```none
+=ImportJSONAdvanced(
+  "",
+  "/issues",
+  "",
+  "",
+  ""
+)
+```
+- A blank `url` falls back to `url` from Script Properties.
+- Blank `email`/`token` fallback to `email` and `token`.
+
+---
+
+## Debugging & Logs
+
+- **Logs**: Use `Logger.log(...)` in Apps Script to see debug output:
+  1. Run your function (e.g., `=ImportJSONAdvanced(...)`) in the spreadsheet.
+  2. Switch to the script editor and go to **View** → **Logs**.
+- **Check the HTTP status**: Ensure you get `200` for success. `401` or `403` typically indicate invalid credentials.
+
+---
+
+## Common Errors & Tips
+
+1. **401 / 403**: Check that `email` and `token` are correct in script properties.  
+2. **Limitations**: By default, Atlassian APIs can page data (e.g., Jira might only return 50–100 issues at a time). You may need to handle pagination or specify `maxResults`.  
+3. **Rate Limits**: Atlassian Cloud may enforce rate limits. If you see HTTP `429`, consider throttling requests or narrowing your search queries.  
+
+---
+
+## Contributing
+
+1. **Fork** the repository and clone it to your local machine.  
+2. **Make changes** or improvements to the script.  
+3. **Submit a pull request** if you have enhancements or bug fixes.
+
+---
+
+## License
+
+This project is based on the original [ImportJSON library by Trevor Lohrbeer](http://blog.fastfedora.com/projects/import-json). See [LICENSE](LICENSE) for details, typically GPL-3.0 or similar.  
+
+For any organization-specific usage, ensure you comply with Atlassian’s API terms and your company’s data security policies.
+
+---
+
+**Happy importing!** If you have any questions, open an issue on GitHub or contact your Atlassian administrator for additional details on API tokens and project configuration.
