@@ -67,55 +67,49 @@ function ImportJSON(url, query, options, email, token) {
  *
  * @return {Array<Array>} Two-dimensional array of data, with the first row containing headers
  */
-function ImportJSONAdvanced(url, query, options, email, token, includeFunc, transformFunc) {
-
-  var scriptProperties = PropertiesService.getScriptProperties();
-  var atlassianUrl   = scriptProperties.getProperty("url");
-  var atlassianEmail = scriptProperties.getProperty("email");
-  var atlassianToken = scriptProperties.getProperty("token");
-
-   // Fallback to script properties if not provided
-  if (!url || url === "") {
-    url = scriptProperties.getProperty("url"); 
-  }
-  if (!email || email === "") {
-    email = scriptProperties.getProperty("email");
-  }
-  if (!token || token === "") {
-    token = scriptProperties.getProperty("token");
-  }
-  
+function ImportJSONAdvanced(url, query, options, email, token) {
   try {
     var fetchOptions = {
       method: 'get',
       muteHttpExceptions: true
     };
-    
+
+    // Add Basic Auth header if email & token are provided
     if (email && token) {
-      var authHeader = Utilities.base64Encode(email + ':' + token);
       fetchOptions.headers = {
-        'Authorization': 'Basic ' + authHeader
+        'Authorization': 'Basic ' + Utilities.base64Encode(email + ':' + token)
       };
     }
 
-    Logger.log('Fetching ' + url + ' with options: ' + JSON.stringify(fetchOptions));
-    
-    var response = UrlFetchApp.fetch(url, fetchOptions);
-    Logger.log('HTTP Status: ' + response.getResponseCode());
-    
-    var jsonString = response.getContentText();
-    Logger.log('JSON snippet: ' + jsonString.substring(0, 200)); // partial log
+    // Perform the fetch
+    var response    = UrlFetchApp.fetch(url, fetchOptions);
+    var statusCode  = response.getResponseCode();
+    var responseBody = response.getContentText();
 
-    var object = JSON.parse(jsonString);
-    
-    return parseJSONObject_(object, query, options, includeFunc, transformFunc);
-    
+    // Check for non-2xx status
+    if (statusCode < 200 || statusCode >= 300) {
+      // Throw an error containing the status and body
+      throw new Error('HTTP ' + statusCode + ' Error\nResponse:\n' + responseBody);
+    }
+
+    // If successful, parse the JSON
+    var data = JSON.parse(responseBody);
+
+    // Continue your normal ImportJSON logic
+    return parseJSONObject_(data, query, options, includeXPath_, defaultTransform_);
+
   } catch (err) {
-    Logger.log('Error fetching or parsing JSON: ' + err);
-    // Optionally rethrow or return an empty array
-    return [['Error'], [err]];
+    // Log to the console for debugging
+    Logger.log(err);
+
+    // Return a small 2D array showing the error text in the cell
+    return [
+      ['Error Occurred'],
+      [err.message ? err.message : err]
+    ];
   }
 }
+
 
 
 /** 
